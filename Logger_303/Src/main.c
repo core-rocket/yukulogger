@@ -50,10 +50,16 @@ I2C_HandleTypeDef hi2c1;
 
 SPI_HandleTypeDef hspi1;
 
+TIM_HandleTypeDef htim7;
+
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+SD_MPU6050 mpu1;
 
+BMP280_HandleTypedef bmp280;
+int32_t temperature;
+uint32_t pressure, humidity;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -62,6 +68,7 @@ static void MX_GPIO_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_TIM7_Init(void);
 /* USER CODE BEGIN PFP */
 /* USER CODE END PFP */
 
@@ -212,40 +219,21 @@ int main(void)
   MX_I2C1_Init();
   MX_SPI1_Init();
   MX_USART2_UART_Init();
+  MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
-  /* TODO test BME280
   	bmp280_init_default_params(&bmp280.params);
 	bmp280.addr = BMP280_I2C_ADDRESS_0;
 	bmp280.i2c = &hi2c1;
 
 	while (!bmp280_init(&bmp280, &bmp280.params)) {
-		uint8_t msg[] = "BMP280: initialozation failed\r\n";
-		HAL_UART_Transmit(&huart2, msg, sizeof(msg), 1000);
+		UART_Printf("BMP280: initialization failed. \r\n");
 		HAL_Delay(2000);
 	}
 	bool bme280p = bmp280.id == BME280_CHIP_ID;
 	if(bme280p){
-		uint8_t msg[] = "BME280 detected...\r\n";
-		HAL_UART_Transmit(&huart2, msg, sizeof(msg), 1000);
-	}
-	*/
-
-  /* TODO test FATFS
-
-  if(f_mount(&FatFs, "", 0) == FR_OK){
-	uint8_t msgMS[] = "Mount Success!\r\n";
-	HAL_UART_Transmit(&huart2, msgMS, sizeof(msgMS), 1000);
-	fr = f_open(&Fil, "newfile.txt", FA_CREATE_ALWAYS | FA_WRITE);
-	if(fr == FR_OK){
-	  f_write(&Fil, "It works!\r\n", 11, &bw);
-	  fr = f_close(&Fil);
+		UART_Printf("BME280 detected... \r\n");
 	}
 
-  }else{
-	  uint8_t msgFL[] = "Mount failed...\r\n";
-	  HAL_UART_Transmit(&huart2, msgFL, sizeof(msgFL), 1000);
-  }
-  */
   UART_Printf("Init status started. \r\n");
   init();
   /* USER CODE END 2 */
@@ -254,14 +242,11 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  /*
 	  result = SD_MPU6050_Init(&hi2c1,&mpu1,SD_MPU6050_Device_0,SD_MPU6050_Accelerometer_2G,SD_MPU6050_Gyroscope_250s );
 	  HAL_Delay(500);
-	  */
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  /*
 	  if(result == SD_MPU6050_Result_Ok)
 	  {
 		  HAL_UART_Transmit(&huart2, mpu_ok, sizeof(mpu_ok), 1000);
@@ -272,48 +257,29 @@ int main(void)
 	  }
 	  HAL_Delay(500);
 	  SD_MPU6050_ReadTemperature(&hi2c1,&mpu1);
-	  //float temper = mpu1.Temperature;
 	  SD_MPU6050_ReadGyroscope(&hi2c1,&mpu1);
 	  int16_t g_x = mpu1.Gyroscope_X;
 	  int16_t g_y = mpu1.Gyroscope_Y;
 	  int16_t g_z = mpu1.Gyroscope_Z;
-	  HAL_UART_Transmit(&huart2, (uint8_t *)&g_x, sizeof((uint8_t *)&g_x), 1000);
+	  //HAL_UART_Transmit(&huart2, (uint8_t *)&g_x, sizeof((uint8_t *)&g_x), 1000);
+	  UART_Printf("g_x: %X , g_y: %X, g_z: %X \r\n",g_x,g_y,g_z);
 
 	  SD_MPU6050_ReadAccelerometer(&hi2c1,&mpu1);
 	  int16_t a_x = mpu1.Accelerometer_X;
 	  int16_t a_y = mpu1.Accelerometer_Y;
 	  int16_t a_z = mpu1.Accelerometer_Z;
-	  HAL_UART_Transmit(&huart2, (uint8_t *)&a_x, sizeof((uint8_t *)&a_x), 1000);
-	  */
+	  //HAL_UART_Transmit(&huart2, (uint8_t *)&a_x, sizeof((uint8_t *)&a_x), 1000);
+	  UART_Printf("a_x: %X , a_y: %X , a_z: %X \r\n",a_x, a_y, a_z);
 
-  /* TODO test BME280
 	HAL_Delay(100);
 	while (!bmp280_read_fixed(&bmp280, &temperature, &pressure, &humidity)) {
-		uint8_t msg[] = "Temperature/pressure reading failed\r\n";
-		HAL_UART_Transmit(&huart2, msg, sizeof(msg), 1000);
+		UART_Printf("Temperature/pressure reading failed\r\n");
 		HAL_Delay(2000);
 	}
 
-	uint8_t msg1[] = "[Pressure]\r\n";
-	HAL_UART_Transmit(&huart2, msg1, sizeof(msg1), 1000);
-	HAL_UART_Transmit(&huart2, pressure, sizeof(pressure), 1000);
-
-	uint8_t msg2[] = "[Temperature]\r\n";
-	HAL_UART_Transmit(&huart2, msg2, sizeof(msg2), 1000);
-	HAL_UART_Transmit(&huart2, temperature, sizeof(temperature), 1000);
-
 	if (bme280p) {
-		uint8_t msg3[] = "[Humidity]\r\n";
-		HAL_UART_Transmit(&huart2, msg3, sizeof(msg3), 1000);
-		HAL_UART_Transmit(&huart2, humidity, sizeof(humidity), 1000);
+		UART_Printf("[Pressure]: %X, [Temperature]: %X, [Humidity]: %X \r\n", pressure, temperature, humidity);
 	}
-
-	else {
-		uint8_t msg4[] = "\n";
-		HAL_UART_Transmit(&huart2, msg4, sizeof(msg4), 1000);
-	}
-	HAL_Delay(2000);
-	*/
   }
   /* USER CODE END 3 */
 }
@@ -442,6 +408,44 @@ static void MX_SPI1_Init(void)
   /* USER CODE BEGIN SPI1_Init 2 */
 
   /* USER CODE END SPI1_Init 2 */
+
+}
+
+/**
+  * @brief TIM7 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM7_Init(void)
+{
+
+  /* USER CODE BEGIN TIM7_Init 0 */
+
+  /* USER CODE END TIM7_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM7_Init 1 */
+
+  /* USER CODE END TIM7_Init 1 */
+  htim7.Instance = TIM7;
+  htim7.Init.Prescaler = 9999;
+  htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim7.Init.Period = 800;
+  htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim7, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM7_Init 2 */
+
+  /* USER CODE END TIM7_Init 2 */
 
 }
 
