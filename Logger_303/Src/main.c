@@ -246,7 +246,6 @@ int main(void)
   MX_SPI1_Init();
   MX_USART2_UART_Init();
   MX_TIM7_Init();
-  HAL_TIM_Base_Start(&htim7);
 
   SysTick_Config(SystemCoreClock / 1000);
   /* USER CODE BEGIN 2 */
@@ -270,12 +269,11 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  UART_Printf("T%u\r\n", millis());
-
 	  result = SD_MPU6050_Init(&hi2c1,&mpu1,SD_MPU6050_Device_0,SD_MPU6050_Accelerometer_2G,SD_MPU6050_Gyroscope_250s );
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  /*
 	  if(result == SD_MPU6050_Result_Ok)
 	  {
 		  HAL_UART_Transmit(&huart2, mpu_ok, sizeof(mpu_ok), 1000);
@@ -284,29 +282,36 @@ int main(void)
 	  {
 		  HAL_UART_Transmit(&huart2, mpu_not, sizeof(mpu_not), 1000);
 	  }
+	  */
 	  SD_MPU6050_ReadTemperature(&hi2c1,&mpu1);
 	  SD_MPU6050_ReadGyroscope(&hi2c1,&mpu1);
 	  int16_t g_x = mpu1.Gyroscope_X;
 	  int16_t g_y = mpu1.Gyroscope_Y;
 	  int16_t g_z = mpu1.Gyroscope_Z;
-	  UART_Printf("g_x: %d , g_y: %d, g_z: %d \r\n",g_x, g_y, g_z);
+	  // TODO uncomment
+	  //UART_Printf("g_x: %d , g_y: %d, g_z: %d \r\n",g_x, g_y, g_z);
 
 	  SD_MPU6050_ReadAccelerometer(&hi2c1,&mpu1);
 	  int16_t a_x = mpu1.Accelerometer_X;
 	  int16_t a_y = mpu1.Accelerometer_Y;
 	  int16_t a_z = mpu1.Accelerometer_Z;
-	  UART_Printf("a_x: %d , a_y: %d , a_z: %d \r\n",a_x, a_y, a_z);
+	  // TODO uncomment
+	  //UART_Printf("a_x: %d , a_y: %d , a_z: %d \r\n",a_x, a_y, a_z);
 
-	while (!bmp280_read_fixed(&bmp280, &temperature, &pressure, &humidity)) {
+	if (!bmp280_read_fixed(&bmp280, &temperature, &pressure, &humidity)) {
 		UART_Printf("Temperature/pressure reading failed\r\n");
 	}
 
 	if (bme280p) {
-		UART_Printf("[Pressure]: %u, [Temperature]: %u, [Humidity]: %u \r\n", pressure, temperature, humidity);
+		// TODO uncomment
+		//UART_Printf("[Pressure]: %u, [Temperature]: %u, [Humidity]: %u \r\n", pressure, temperature, humidity);
 	}
 
+	// Test status
+	UART_Printf("TS%u/", millis());
+	UART_Printf("G%u/A%u/P%u/T%u/H%u\r\n",g_x , a_x, pressure, temperature, humidity);
+
   }
-  HAL_TIM_Base_Stop(&htim7);
   /* USER CODE END 3 */
 }
 
