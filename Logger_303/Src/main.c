@@ -60,6 +60,8 @@ SD_MPU6050 mpu1;
 BMP280_HandleTypedef bmp280;
 int32_t temperature;
 uint32_t pressure, humidity;
+
+volatile uint32_t milliscounter = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -81,6 +83,27 @@ void UART_Printf(const char* fmt, ...) {
     vsnprintf(buff, sizeof(buff), fmt, args);
     HAL_UART_Transmit(&huart2, (uint8_t*)buff, strlen(buff), HAL_MAX_DELAY);
     va_end(args);
+}
+
+uint64_t readCounter()
+{
+	volatile uint32_t m_counter = 0;
+	const uint32_t counter1 = m_counter;
+	const uint32_t CNT1 = TIM7->CNT;
+	const uint32_t counter2 = m_counter;
+	const uint32_t CNT2 = TIM7->CNT;
+	const uint32_t shiftedcounter1 = counter1 << 16;
+	const uint32_t shiftedcounter2 = counter2 << 16;
+
+	if (counter1 == counter2 ){	//割り込みが発生しない
+		return ( shiftedcounter1 ) + CNT1;
+	}else{	// counter1とcounter2の計測間に割り込みが発生した
+		return ( shiftedcounter2 ) + CNT2;
+	}
+}
+
+uint32_t millis(){
+	return milliscounter;
 }
 
 void init() {
@@ -192,8 +215,11 @@ void init() {
 int main(void)
 {
   /* USER CODE BEGIN 1 */
+	uint32_t starttime = millis();
+	UART_Printf("start time: %u\r\n", starttime);
+
 	SD_MPU6050_Result result ;
-	uint8_t mpu_ok[15] = {"MPU WORK FINE\n"};
+   	uint8_t mpu_ok[15] = {"MPU WORK FINE\n"};
 	uint8_t mpu_not[17] = {"MPU NOT WORKING\n"};
   /* USER CODE END 1 */
   
@@ -220,6 +246,9 @@ int main(void)
   MX_SPI1_Init();
   MX_USART2_UART_Init();
   MX_TIM7_Init();
+  HAL_TIM_Base_Start(&htim7);
+
+  SysTick_Config(SystemCoreClock / 1000);
   /* USER CODE BEGIN 2 */
   	bmp280_init_default_params(&bmp280.params);
 	bmp280.addr = BMP280_I2C_ADDRESS_0;
@@ -234,7 +263,6 @@ int main(void)
 		UART_Printf("BME280 detected... \r\n");
 	}
 
-  UART_Printf("Init status started. \r\n");
   init();
   /* USER CODE END 2 */
 
@@ -242,8 +270,9 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  UART_Printf("T%u\r\n", millis());
+
 	  result = SD_MPU6050_Init(&hi2c1,&mpu1,SD_MPU6050_Device_0,SD_MPU6050_Accelerometer_2G,SD_MPU6050_Gyroscope_250s );
-	  HAL_Delay(500);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -255,32 +284,29 @@ int main(void)
 	  {
 		  HAL_UART_Transmit(&huart2, mpu_not, sizeof(mpu_not), 1000);
 	  }
-	  HAL_Delay(500);
 	  SD_MPU6050_ReadTemperature(&hi2c1,&mpu1);
 	  SD_MPU6050_ReadGyroscope(&hi2c1,&mpu1);
 	  int16_t g_x = mpu1.Gyroscope_X;
 	  int16_t g_y = mpu1.Gyroscope_Y;
 	  int16_t g_z = mpu1.Gyroscope_Z;
-	  //HAL_UART_Transmit(&huart2, (uint8_t *)&g_x, sizeof((uint8_t *)&g_x), 1000);
-	  UART_Printf("g_x: %X , g_y: %X, g_z: %X \r\n",g_x,g_y,g_z);
+	  UART_Printf("g_x: %d , g_y: %d, g_z: %d \r\n",g_x, g_y, g_z);
 
 	  SD_MPU6050_ReadAccelerometer(&hi2c1,&mpu1);
 	  int16_t a_x = mpu1.Accelerometer_X;
 	  int16_t a_y = mpu1.Accelerometer_Y;
 	  int16_t a_z = mpu1.Accelerometer_Z;
-	  //HAL_UART_Transmit(&huart2, (uint8_t *)&a_x, sizeof((uint8_t *)&a_x), 1000);
-	  UART_Printf("a_x: %X , a_y: %X , a_z: %X \r\n",a_x, a_y, a_z);
+	  UART_Printf("a_x: %d , a_y: %d , a_z: %d \r\n",a_x, a_y, a_z);
 
-	HAL_Delay(100);
 	while (!bmp280_read_fixed(&bmp280, &temperature, &pressure, &humidity)) {
 		UART_Printf("Temperature/pressure reading failed\r\n");
-		HAL_Delay(2000);
 	}
 
 	if (bme280p) {
-		UART_Printf("[Pressure]: %X, [Temperature]: %X, [Humidity]: %X \r\n", pressure, temperature, humidity);
+		UART_Printf("[Pressure]: %u, [Temperature]: %u, [Humidity]: %u \r\n", pressure, temperature, humidity);
 	}
+
   }
+  HAL_TIM_Base_Stop(&htim7);
   /* USER CODE END 3 */
 }
 

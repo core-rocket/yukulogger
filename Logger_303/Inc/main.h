@@ -23,10 +23,6 @@
 #ifndef __MAIN_H
 #define __MAIN_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f3xx_hal.h"
 
@@ -61,12 +57,8 @@ void Error_Handler(void);
 #define SD_SPI_CS_Pin GPIO_PIN_4
 #define SD_SPI_CS_GPIO_Port GPIOA
 /* USER CODE BEGIN Private defines */
-
+extern volatile uint32_t milliscounter;
 /* USER CODE END Private defines */
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* __MAIN_H */
 

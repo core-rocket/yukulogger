@@ -35,6 +35,12 @@ default.size.stdout \
 OBJDUMP_LIST += \
 Logger_303.list \
 
+OBJCOPY_HEX += \
+Logger_303.hex \
+
+OBJCOPY_BIN += \
+Logger_303.bin \
+
 
 # All Target
 all: Logger_303.elf secondary-outputs
@@ -55,12 +61,22 @@ Logger_303.list: $(EXECUTABLES)
 	@echo 'Finished building: $@'
 	@echo ' '
 
+Logger_303.hex: $(EXECUTABLES)
+	arm-none-eabi-objcopy  -O ihex $(EXECUTABLES) "Logger_303.hex"
+	@echo 'Finished building: $@'
+	@echo ' '
+
+Logger_303.bin: $(EXECUTABLES)
+	arm-none-eabi-objcopy  -O binary $(EXECUTABLES) "Logger_303.bin"
+	@echo 'Finished building: $@'
+	@echo ' '
+
 # Other Targets
 clean:
 	-$(RM) *
 	-@echo ' '
 
-secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST)
+secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST) $(OBJCOPY_HEX) $(OBJCOPY_BIN)
 
 .PHONY: all clean dependents
 .SECONDARY:
